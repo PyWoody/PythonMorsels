@@ -1,0 +1,56 @@
+.DS_Store
+*.log
+*db.sqlite3
+*db.sqlite3-journal
+cache.db*
+.ruff_cache/
+
+# morsel specific
+data/
+test_*.py
+*.txt
+extractor.py
+mover.py
+readmeier.py
+urls.csv
+
+# Vim-stuff
+# Swap
+[._]*.s[a-v][a-z]
+!*.svg  # comment out if you don't need vector files
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# Session
+Session.vim
+Sessionx.vim
+
+# Temporary
+.netrwhist
+*~
+# Auto-generated tag files
+tags
+# Persistent undo
+[._]*.un~
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# pyenv
+.python-version
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
