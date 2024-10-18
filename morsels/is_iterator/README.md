@@ -1,5 +1,4 @@
-## is_iterator
-mini
+## is_iterator - mini
 
 **Difficulty:** Advanced
 

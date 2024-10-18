@@ -1,5 +1,4 @@
-## groot
-mini
+## groot - mini
 
 **Difficulty:** Intermediate
 

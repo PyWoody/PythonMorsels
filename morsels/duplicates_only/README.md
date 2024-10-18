@@ -1,5 +1,4 @@
-## duplicates_only
-mini
+## duplicates_only - mini
 
 **Difficulty:** Intermediate
 

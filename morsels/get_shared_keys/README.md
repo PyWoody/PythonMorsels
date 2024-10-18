@@ -1,5 +1,4 @@
-## get_shared_keys
-mini
+## get_shared_keys - mini
 
 **Difficulty:** Intermediate
 

@@ -1,5 +1,4 @@
-## paste_code
-mini
+## paste_code - mini
 
 **Difficulty:** Advanced
 

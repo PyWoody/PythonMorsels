@@ -1,5 +1,4 @@
-## Row
-mini
+## Row - mini
 
 **Difficulty:** Advanced
 

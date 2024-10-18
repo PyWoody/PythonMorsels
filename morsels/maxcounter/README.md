@@ -1,5 +1,4 @@
-## MaxCounter
-mini
+## MaxCounter - mini
 
 **Difficulty:** Intermediate
 

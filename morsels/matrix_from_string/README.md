@@ -1,5 +1,4 @@
-## matrix_from_string
-mini
+## matrix_from_string - mini
 
 **Difficulty:** Intermediate
 

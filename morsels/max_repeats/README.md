@@ -1,5 +1,4 @@
-## Maximum repeats
-mini
+## Maximum repeats - mini
 
 **Difficulty:** Intermediate
 

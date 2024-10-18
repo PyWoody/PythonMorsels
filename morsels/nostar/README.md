@@ -1,5 +1,4 @@
-## nostar
-mini
+## nostar - mini
 
 **Difficulty:** Advanced
 

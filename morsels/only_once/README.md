@@ -1,5 +1,4 @@
-## only_once
-mini
+## only_once - mini
 
 **Difficulty:** Advanced
 

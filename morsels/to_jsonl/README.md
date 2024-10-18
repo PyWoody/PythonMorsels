@@ -1,5 +1,4 @@
-## to_jsonl
-mini
+## to_jsonl - mini
 
 **Difficulty:** Intermediate
 

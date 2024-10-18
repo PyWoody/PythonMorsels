@@ -1,5 +1,4 @@
-## remove_empty
-mini
+## remove_empty - mini
 
 **Difficulty:** Advanced
 

@@ -1,5 +1,4 @@
-## first
-mini
+## first - mini
 
 **Difficulty:** Advanced
 

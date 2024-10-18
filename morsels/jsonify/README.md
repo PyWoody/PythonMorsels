@@ -1,5 +1,4 @@
-## jsonify
-mini
+## jsonify - mini
 
 **Difficulty:** Advanced
 
