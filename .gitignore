@@ -12,7 +12,7 @@ test_*.py
 extractor.py
 mover.py
 readmeier.py
-urls.csv
+*.csv
 
 # Vim-stuff
 # Swap
