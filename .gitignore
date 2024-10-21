@@ -7,11 +7,9 @@ cache.db*
 
 # morsel specific
 data/
+scripts/
 test_*.py
 *.txt
-extractor.py
-mover.py
-readmeier.py
 *.csv
 
 # Vim-stuff
