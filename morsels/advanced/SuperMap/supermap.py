@@ -1,92 +1,105 @@
+from functools import cached_property
+
+
 class SuperMap:
 
-    def __init__(self, hash_objects, indexes):
-        if not all(is_hashable(i) for i in indexes):
-            raise TypeError
-        self.hash_objects = set(hash_objects)
-        self.indexes = list(indexes)
-        self.index_map = None
+    def __init__(self, data, indexes):
+        self.indexes = {i for i in indexes}
+        self._data = data
+        self.mapping = None
 
     def __repr__(self):
         cls = self.__class__.__name__
-        return f'{cls}({", ".join(repr(i) for i in self)})'
+        return f'{cls}({", ".join(repr(i) for i in self.data)})'
+
+    def __iter__(self):
+        yield from self.data
 
     def __len__(self):
-        return len(self.hash_objects)
+        return len(self.data)
+
+    def __contains__(self, other):
+        if is_hashable(other):
+            return other in self.data
+        return NotImplemented
 
     def __eq__(self, other):
         if isinstance(other, type(self)):
-            if self.hash_objects != other.hash_objects:
-                return False
-            if self.indexes != other.indexes:
-                return False
-            return True
-        return self.hash_objects == other
+            return self.data == other.data
+        return self.data == other
 
-    def __iter__(self):
-        yield from self.hash_objects
+    @cached_property
+    def data(self):
+        return {i for i in self._data}
 
-    def __contains__(self, item):
-        return item in self.hash_objects
+    def where(self, **queries):
+        if any(k not in self.indexes for k in queries):
+            raise ValueError
+        return type(self)(self._query(**queries), self.indexes)
+
+
+    def _query(self, **queries):
+        if self.mapping is None:
+            self.reset()
+        sentinel = object()
+        output = dict()
+        for k, v in queries.items():
+            data = self.mapping.get(k, {}).get(v, sentinel)
+            if data is not sentinel:
+                output.setdefault(k, set()).update(data)
+        if values := output.values():
+            yield from set.intersection(*values)
+
+    def reset(self):
+        self.mapping = {}
+        self.update(self.data)
 
     def add(self, item):
-        self.hash_objects.add(item)
-        if self.index_map is None:
-            self.index_map = build_index_map(self.hash_objects, self.indexes)
+        if self.mapping is None:
+            self.reset()
+        if hasattr(item, '__dict__'):
+            for k, v in item.__dict__().keys():
+                self.mapping.setdefault(
+                    k, {}
+                ).setdefault(
+                    v, set()
+                ).add(item)
+        elif hasattr(item, '__slots__'):
+            for slot in item.__slots__:
+                self.mapping.setdefault(
+                    slot, {}
+                ).setdefault(
+                    getattr(item, slot), set()
+                ).add(item)
+        else:
+            raise Exception
+        self.data.add(item)
+
+    def update(self, items):
+        for item in items:
+            self.add(item)
 
     def discard(self, item):
         try:
-            self.hash_objects.remove(item)
+            self.data.remove(item)
         except KeyError:
             pass
         else:
-            if self.index_map is not None:
-                self.index_map = build_index_map(
-                    self.hash_objects, self.indexes
-                )
-
-    def update(self, *items):
-        self.hash_objects.update(*items)
-        if self.index_map is not None:
-            self.index_map = build_index_map(self.hash_objects, self.indexes)
+            self.reset()
 
     def add_indexes(self, *indexes):
-        self.indexes.extend(indexes)
-        if self.index_map is not None:
-            self.index_map = build_index_map(self.hash_objects, self.indexes)
+        rebuild = False
+        for index in indexes:
+            if index not in self.indexes:
+                self.indexes.add(index)
+                rebuild = True
+        if rebuild:
+            self.reset()
 
     def remove_indexes(self, *indexes):
         for index in indexes:
             self.indexes.remove(index)
-        if self.index_map is not None:
-            self.index_map = build_index_map(self.hash_objects, self.indexes)
-
-    def where(self, **kwargs):
-        if any(k not in self.indexes for k in kwargs):
-            raise ValueError
-        if self.index_map is None:
-            self.index_map = build_index_map(self.hash_objects, self.indexes)
-        matches = []
-        for key, value in kwargs.items():
-            if index := self.index_map.get(key):
-                if objects := index.get(value):
-                    matches.append(objects)
-        if len(matches) == 0:
-            return SuperMap([], self.indexes)
-        return SuperMap(set.intersection(*matches), self.indexes)
-
-
-def build_index_map(hash_objects, indexes):
-    output = {}
-    for index in indexes:
-        for obj in hash_objects:
-            if hasattr(obj, index):
-                output.setdefault(
-                    index, dict()
-                ).setdefault(
-                    getattr(obj, index), set()
-                ).add(obj)
-    return output
+        self.reset()
 
 
 def is_hashable(obj):
