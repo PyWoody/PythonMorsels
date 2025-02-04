@@ -49,18 +49,6 @@ class Hashable(metaclass=MetaHashable):
     pass
 
 
-class _ImmutableSequence(ABC):
-
-    @classmethod
-    def __subclasshook__(cls, C):
-        if cls is ImmutableSequence:
-            if any(hasattr(B, '__setitem__') for B in C.__mro__):
-                if any(isinstance(B, (set, tuple)) for B in C.__mro__):
-                    breakpoint()
-                return False
-        return NotImplemented
-
-
 class MetaImmutableSequence(type):
 
     def __instancecheck__(self, instance):
