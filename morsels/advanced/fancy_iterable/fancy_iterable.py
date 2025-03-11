@@ -1,67 +1,52 @@
-import copy
+import itertools
 
 
 class fancy:
 
-    def __init__(self, iterable=None):
-        self.iterables = []
-        if iterable is not None:
-            self.iterables.append(iterable)
-        self.filter_funcs = []
-        self.map_funcs = []
-        self.dropwhile_func = None
-        self.takewhile_func = None
+    def __init__(self, iterable=None, restarable=False):
+        self.iterables = [iter(iterable)] if iterable is not None else []
+        self.results = []
+        self.restarable = bool(restarable)
 
     def __iter__(self):
-        for iterable in self.iterables:
-            for item in iterable:
-                for func in self.map_funcs:
-                    item = func(item)
-                if all(func(item) for func in self.filter_funcs):
-                    if self.dropwhile_func:
-                        if self.dropwhile_func(item):
-                            continue
-                        self.dropwhile_func = None
-                    if self.takewhile_func and not self.takewhile_func(item):
-                        return
-                    yield item
+        if self.iterables:
+            while self.iterables:
+                try:
+                    result = next(self.iterables[0])
+                    self.results.append(result)
+                    yield result
+                except StopIteration:
+                    _ = self.iterables.pop(0)
+        elif self.restarable:
+            yield from self.results
 
-    def clone(self):
-        c = type(self)()
-        c.iterables = copy.copy(self.iterables)
-        c.filter_funcs = copy.copy(self.filter_funcs)
-        c.map_funcs = copy.copy(self.map_funcs)
-        c.dropwhile_func = self.dropwhile_func
-        c.takewhile_func = self.takewhile_func
-        return c
+    @classmethod
+    def clone(cls, data=None, restarable=True):
+        return cls(data, restarable=restarable)
 
     def concat(self, *iterables):
-        obj = self.clone()
-        obj.iterables.extend(iterables)
-        return obj
+        self.iterables.extend(iter(i) for i in iterables)
+        return self
 
     def drop_while(self, func):
-        obj = self.clone()
-        obj.dropwhile_func = func
-        return obj
+        self.restarable = True
+        return self.clone(itertools.dropwhile(func, self))
 
     def take_while(self, func):
-        obj = self.clone()
-        obj.takewhile_func = func
-        return obj
+        return self.clone(itertools.takewhile(func, self))
 
-    def filter(self, func):
-        obj = self.clone()
-        obj.filter_funcs.append(func)
-        return obj
+    def filter(self, func=None):
+        self.restarable = True
+        return self.clone(
+            i for i in self if func is None and i or func(i)
+        )
 
     def map(self, func):
-        obj = self.clone()
-        obj.map_funcs.append(func)
-        return obj
+        self.restarable = True
+        return self.clone(func(i) for i in self)
 
-    def every(self, condition):
-        return all(condition(i) for i in self)
+    def some(self, func):
+        return any(func(i) for i in self)
 
-    def some(self, condition):
-        return any(condition(i) for i in self)
+    def every(self, func):
+        return all(func(i) for i in self)
