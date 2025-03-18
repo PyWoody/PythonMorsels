@@ -1,158 +1,127 @@
+import operator
+
+from functools import partial
+
+
+class QueryList:
+
+    def __init__(self, items=None):
+        self.items = list(items) if items is not None else []
+
+    def __iter__(self):
+        yield from self.items
+
+    def append(self, item):
+        self.items.append(item)
+        return self
+
+    def attrs(self, *attrs):
+        if len(attrs) == 1:
+            return [getattr(i, attrs[0]) for i in self]
+        return [tuple(getattr(i, a) for a in attrs) for i in self]
+
+    def filter(self, *F_args, **filters):
+        operators = []
+        for k, default_value in filters.items():
+            attr, *op = k.split('__')
+            operator = OPERATORS[op[0]] if op else OPERATORS['eq']
+            operators.append((attr, partial(operator, default_value)))
+        return type(self)(
+            item for item in self
+            if all(func(getattr(item, k)) for k, func in operators) and
+            all(f(item) for f in F_args)
+        )
+
+
 class FFactory:
 
-    def __getattribute__(self, name):
-        return Operator(name)
+    def __init__(self, key=None):
+        self.key = key
+        self.func = None
+        self.all_funcs = []
+        self.any_funcs = []
 
+    def __getattr__(self, key):
+        return type(self)(key=key)
 
-class Operator:
+    def __call__(self, other):
+        if self.all_funcs and self.any_funcs:
+            if all(func(other) for func in self.all_funcs):
+                if self.func(getattr(other, self.key)):
+                    return True
+                if any(func(other) for func in self.any_funcs):
+                    return True
+            return False
+        elif self.all_funcs:
+            if not self.func(getattr(other, self.key)):
+                return False
+            return all(func(other) for func in self.all_funcs)
+        elif self.any_funcs:
+            if self.func(getattr(other, self.key)):
+                return True
+            return any(func(other) for func in self.any_funcs)
+        else:
+            return self.func(getattr(other, self.key))
 
-    def __init__(self, field):
-        self.field = field
+    def __or__(self, other):
+        self.any_funcs.append(other)
+        return self
+
+    def __and__(self, other):
+        self.all_funcs.append(other)
+        return self
 
     def __gt__(self, other):
-        def evaluate(item):
-            if not hasattr(item, self.field):
-                return False
-            return int(getattr(item, self.field)) > int(other)
-        return evaluate
+        self.func = partial(OPERATORS['gt'], other)
+        return self
 
     def __lt__(self, other):
-        def evaluate(item):
-            if not hasattr(item, self.field):
-                return False
-            return int(getattr(item, self.field)) < int(other)
-        return evaluate
-
-    def __ne__(self, other):
-        def evaluate(item):
-            if not hasattr(item, self.field):
-                return False
-            return getattr(item, self.field) != other
-        return evaluate
+        self.func = partial(OPERATORS['lt'], other)
+        return self
 
     def __eq__(self, other):
-        def evaluate(item):
-            if not hasattr(item, self.field):
-                return False
-            return getattr(item, self.field) == other
-        return evaluate
+        self.func = partial(OPERATORS['eq'], other)
+        return self
+
+    def __ne__(self, other):
+        self.func = partial(OPERATORS['ne'], other)
+        return self
+
+    def __le__(self, other):
+        self.func = partial(OPERATORS['le'], other)
+        return self
+
+    def __ge__(self, other):
+        self.func = partial(OPERATORS['ge'], other)
+        return self
 
     def __contains__(self, other):
-        def evaluate(item):
-            if not hasattr(item, self.field):
-                return False
-            return getattr(item, self.field) in other
-        return evaluate
+        self.func = partial(OPERATORS['contains'], other)
+        return self
+
+    def __in__(self, other):
+        self.func = partial(OPERATORS['eq'], other)
+        return self
 
 
 F = FFactory()
 
 
-class QueryList:
-
-    def __init__(self, iterable):
-        self.iterable = list(iterable)
-
-    def __iter__(self):
-        yield from self.iterable
-
-    def __repr__(self):
-        cls = self.__class__.__name__
-        return f'{cls}({", ".join(repr(i) for i in self.iterable)})'
-
-    def append(self, item):
-        self.iterable.append(item)
-
-    def attrs(self, *attrs):
-        if len(attrs) == 1:
-            return [
-                getattr(i, attrs[0])
-                for i in self.iterable if hasattr(i, attrs[0])
-            ]
-        output = []
-        for i in self.iterable:
-            if all(hasattr(i, a) for a in attrs):
-                output.append(tuple(getattr(i, a) for a in attrs))
-        return output
-
-    def filter(self, *fargs, **filters):
-        if fargs:
-            return QueryList(
-                i for i in self.iterable if all(f(i) for f in fargs)
-            )
-        else:
-            eval_filters = {}
-            for _filter, default_value in filters.items():
-                field, *func = _filter.split('__')
-                eval_filters[field] = find(func)(default_value)
-            return QueryList(
-                i for i in self.iterable
-                if all(func(i, field) for field, func in eval_filters.items())
-            )
+def _in(obj, value):
+    return value in obj
 
 
-def find(func):
-    if not func:
-        return eq
-    func = func[0].lower().strip()
-    if func == 'gt':
-        return gt
-    elif func == 'lt':
-        return lt
-    elif func == 'ne':
-        return ne
-    elif func == 'eq':
-        return eq
-    elif func == 'in':
-        return _in
-    elif func == 'contains':
-        return contains
-    raise Exception
+def contains(value, obj):
+    return value in obj
 
 
-def gt(initial_value):
-    def evaluate(item, attr):
-        if not hasattr(item, attr):
-            return False
-        return int(getattr(item, attr)) > int(initial_value)
-    return evaluate
-
-
-def lt(initial_value):
-    def evaluate(item, attr):
-        if not hasattr(item, attr):
-            return False
-        return int(getattr(item, attr)) < int(initial_value)
-    return evaluate
-
-
-def ne(initial_value):
-    def evaluate(item, attr):
-        if not hasattr(item, attr):
-            return False
-        return getattr(item, attr) != initial_value
-    return evaluate
-
-
-def eq(initial_value):
-    def evaluate(item, attr):
-        if not hasattr(item, attr):
-            return False
-        return getattr(item, attr) == initial_value
-    return evaluate
-
-
-def _in(initial_value):
-    def evaluate(item, attr):
-        if not hasattr(item, attr):
-            return False
-        return getattr(item, attr) in initial_value
-    return evaluate
-
-
-def contains(initial_value):
-    def evaluate(item, attr):
-        if not hasattr(item, attr):
-            return False
-        return str(initial_value) in str(getattr(item, attr))
-    return evaluate
+OPERATORS = {
+    'gt': operator.lt,
+    'lt': operator.gt,
+    'eq': operator.eq,
+    'ne': operator.ne,
+    'le': operator.ge,
+    'ge': operator.le,
+    'contains': contains,
+    'in': _in,
+}
