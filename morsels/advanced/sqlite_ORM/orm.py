@@ -78,8 +78,7 @@ class Result:
         yield from self.cache
 
     def filter(self, **filters):
-        prev_filters = dict(self.filters)
-        prev_filters.update(filters)
+        prev_filters = {**self.filters, **filters}
         return type(self)(self.con, self.query, prev_filters)
 
 
